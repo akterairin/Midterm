@@ -1,1 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enhanced Map with Buffer Tool</title>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.25/esri/themes/light/main.css">
+  <style>
+    html, body, #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+    #bufferControls {
+      position: absolute;
+      top: 50px; /* Adjusted for title bar */
+      left: 20px;
+      background: white;
+      padding: 10px;
+      z-index: 99;
+    }
+    #mapTitle {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 99;
+      font-size: 20px;
+      color: #004481;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 5px 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="mapTitle"> Buffer Tool with Navigation by Airin</div>
+  <div id="viewDiv"></div>
+  <div id="bufferControls">
+    <label for="bufferDistance">Buffer Distance (meters):</label>
+    <input type="number" id="bufferDistance" value="500" min="1" step="1">
+    <button id="createBuffer">Create Buffer</button>
+    <div id="coordinates">
+      <label for="longitude">Longitude:</label>
+      <input type="text" id="longitude" readonly>
+      <label for="latitude">Latitude:</label>
+      <input type="text" id="latitude" readonly>
+    </div>
+  </div>
+  <script src="https://js.arcgis.com/4.25/"></script>
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/Graphic",
+      "esri/layers/GraphicsLayer",
+      "esri/geometry/geometryEngine",
+      "esri/geometry/Point",
+      "esri/widgets/ScaleBar",
+      "esri/widgets/Compass"
+    ], function(Map, MapView, Graphic, GraphicsLayer, geometryEngine, Point, ScaleBar, Compass) {
 
+      const map = new Map({
+        basemap: "topo-vector"
+      });
+
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [-98.5795, 39.8283], // Center of the USA
+        zoom: 10
+      });
+
+      const graphicsLayer = new GraphicsLayer();
+      map.add(graphicsLayer);
+
+      const bufferDistanceInput = document.getElementById("bufferDistance");
+      const longitudeInput = document.getElementById("longitude");
+      const latitudeInput = document.getElementById("latitude");
+      const createBufferButton = document.getElementById("createBuffer");
+
+      let clickPoint = null; // This will hold the last clicked point
+
+      // Add the scale bar
+      var scaleBar = new ScaleBar({
+        view: view,
+        unit: "dual" // Display both metric and non-metric units
+      });
+      view.ui.add(scaleBar, {
+        position: "bottom-left"
+      });
+
+      // Add the compass
+      var compass = new Compass({
+        view: view
+      });
+      view.ui.add(compass, "top-right");
+
+      // Listen for map clicks to capture coordinates
+      view.on("click", function(event) {
+        clickPoint = new Point({
+          longitude: event.mapPoint.longitude,
+          latitude: event.mapPoint.latitude
+        });
+
+        longitudeInput.value = clickPoint.longitude.toFixed(5); // Display longitude with 5 decimal places
+        latitudeInput.value = clickPoint.latitude.toFixed(5); // Display latitude with 5 decimal places
+      });
+
+      // Listen for button click to create buffer
+      createBufferButton.onclick = function() {
+        if (!clickPoint) return; // If no point has been clicked, do nothing
+
+        const bufferDistance = parseFloat(bufferDistanceInput.value);
+        const buffer = geometryEngine.geodesicBuffer(clickPoint, bufferDistance, "meters");
+
+        const bufferGraphic = new Graphic({
+          geometry: buffer,
+          symbol: {
+            type: "simple-fill", // autocasts as new SimpleFillSymbol()
+            color: "blue",
+            style: "solid",
+            outline: {  // autocasts as new SimpleLineSymbol()
+              color: "darkblue",
+              width: 2
+            }
+          }
+        });
+
+        graphicsLayer.add(bufferGraphic);
+      };
+
+    });
+  </script>
+</body>
+</html>
